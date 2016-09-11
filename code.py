@@ -51,10 +51,10 @@ def rand_sentence(prob_table, n):
     return sentence
 
 if __name__ == '__main__':
-    n = int(raw_input("Enter value of n \n"))
+    n = int(input("Enter value of n \n"))
     text = ""
     while True:
-        data = raw_input("Enter file, or enter blank if no more files: \n")
+        data = input("Enter file, or enter blank if no more files: \n")
         if not data.lower() == "":
             with open(data, 'r') as my_file:
                 text += my_file.read().replace('\n', '')
@@ -64,4 +64,4 @@ if __name__ == '__main__':
     token = nltk.word_tokenize(text)
     ng = find_ngram_prob(n, token)
     #print ng
-    print rand_sentence(ng, n)
+    print(rand_sentence(ng, n))
