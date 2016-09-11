@@ -25,15 +25,13 @@ def rand_sentence(prob_table, n):
     match = '-s-'
     sentence = '-s-'
     is_punct = True
-    punct = ['.', ',', '?', '!']
     while match != '-/s-':
         ngram = []
         prob = []
         if n == 1:
-            ngram = prob_table.keys()
-            prob = prob_table.values()
+            ngram = list(prob_table.keys())
+            prob = list(prob_table.values())
             match = np.random.choice(ngram, 1, prob)[0]
-            match = match.astype("string")
             while (match == '-s-') | (is_punct & ((match == '.') |
                   (match == ',') | (match == '!') | (match == '?'))):
                 match = np.random.choice(ngram, 1, prob)[0]
@@ -43,7 +41,7 @@ def rand_sentence(prob_table, n):
                     ngram.append(k)
                     prob.append(prob_table.get(k))
             match = ngram[np.random.choice(len(ngram), 1, prob)[0]][1]
-        if match in punct:
+        if (match == '.') | (match == ',') | (match == '!') | (match == '?'):
             is_punct = True
             sentence += match
         else:
