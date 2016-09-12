@@ -3,6 +3,8 @@ import nltk.data
 import numpy as np
 import os
 
+from email.parser import Parser
+
 # data_corrected\classification task\atheism\train_docs
 
 
@@ -12,11 +14,13 @@ def find_ngram_counts(dirname):
     unigram_counts = {}
     bigram_counts = {}
     
-    for filename in os.listdir(dirname):
+#     for filename in os.listdir(dirname):
+    for filename in ["atheism_file1.txt"]:
         with open(os.path.join(dirname,filename), 'r') as f:
             text = f.readline()
             
             sentence_list = sentence_detector.tokenize(text)
+
             # Add sentence boundary tags to each sentence
             added_sentence_tags_list = ["-s- " + sentence + " -/s-" for sentence in sentence_list]
 #             print(added_sentence_tags_list)
@@ -109,9 +113,18 @@ def find_ngram_prob(dirname):
 
 
 #remove used words? how to deal with multiple punctuation in a row?
-def rand_sentence(prob_table, n):
-    match = '-s-'
-    sentence = '-s-'
+def rand_sentence(prob_table, n, start_of_sentence='-s-'):
+    tokens = nltk.word_tokenize(start_of_sentence)
+    
+    # set this to the last token in given start_of_sentence
+    match = tokens[len(tokens) - 1]
+    
+    # make sure sentence starts with start sentence token
+    if tokens[0] != "-s-":
+        sentence = "-s- " + start_of_sentence
+    else:
+        sentence = start_of_sentence
+        
     is_punct = True
     while match != '-/s-':
         ngram = []
@@ -141,20 +154,26 @@ def rand_sentence(prob_table, n):
 def main():
     n = int(input("Enter value of n (only 1 or 2)\n"))
 #     text = ""
-    
+     
     data = input("Enter file or directory name of corpus: \n")
-    
+     
     unigram_prob, bigram_prob = find_ngram_prob(data)
-    
+     
     if n == 1:
         prob_table = unigram_prob
     elif n == 2:
         prob_table = bigram_prob
     else:
         print("Can only do unigram and bigram\n")
-    
+     
 #     print(prob_table)
-    print(rand_sentence(prob_table, n))
+
+    start_of_sentence = input("Enter partial sentence that you want completed (or leave empty for new sentence) \n")
+    if start_of_sentence == "":
+        start_of_sentence = "-s-"
+    for _ in range(0,5):
+#         print(rand_sentence(prob_table, n))
+        print(rand_sentence(prob_table, n, start_of_sentence))
 
 
 if __name__ == '__main__':
