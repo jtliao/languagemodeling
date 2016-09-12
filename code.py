@@ -14,8 +14,7 @@ def find_ngram_counts(dirname):
     unigram_counts = {}
     bigram_counts = {}
     
-#     for filename in os.listdir(dirname):
-    for filename in ["atheism_file1.txt"]:
+    for filename in os.listdir(dirname):
         with open(os.path.join(dirname,filename), 'r') as f:
             text = f.readline()
             
@@ -39,7 +38,7 @@ def find_ngram_counts(dirname):
                 
                 # Design decision to ignore these special characters
                 if (word == "<" or word == ">" or word == "|" or word == "#" or
-                    word == "'" or word == '"' or word == '`'):
+                    word == "'" or word == '"' or word == '`' or word == '``'):
                     continue
                 
                 # Design decision to ignore every thing that is in parentheses/brackets
@@ -117,7 +116,7 @@ def rand_sentence(prob_table, n, start_of_sentence='-s-'):
     tokens = nltk.word_tokenize(start_of_sentence)
     
     # set this to the last token in given start_of_sentence
-    match = tokens[len(tokens) - 1]
+    match = tokens[len(tokens) - 1].lower()
     
     # make sure sentence starts with start sentence token
     if tokens[0] != "-s-":
@@ -132,17 +131,17 @@ def rand_sentence(prob_table, n, start_of_sentence='-s-'):
         if n == 1:
             ngram = list(prob_table.keys())
             prob = list(prob_table.values())
-            match = np.random.choice(ngram, 1, prob)[0]
-            while (match == '-s-') | (is_punct & ((match == '.') |
-                  (match == ',') | (match == '!') | (match == '?'))):
-                match = np.random.choice(ngram, 1, prob)[0]
+            match = np.random.choice(ngram, 1, p=prob)[0]
+            while (match == '-s-') or (is_punct & ((match == '.') or
+                  (match == ',') or (match == '!') or (match == '?'))):
+                match = np.random.choice(ngram, 1, p=prob)[0]
         if n == 2:
             for k in prob_table.keys():
                 if k[0] == match:
                     ngram.append(k)
                     prob.append(prob_table.get(k))
-            match = ngram[np.random.choice(len(ngram), 1, prob)[0]][1]
-        if (match == '.') | (match == ',') | (match == '!') | (match == '?'):
+            match = ngram[np.random.choice(len(ngram), 1, p=prob)[0]][1]
+        if (match == '.') or (match == ',') or (match == '!') or (match == '?'):
             is_punct = True
             sentence += match
         else:
@@ -156,9 +155,13 @@ def main():
 #     text = ""
      
     data = input("Enter file or directory name of corpus: \n")
+    
+    # data_corrected\classification task\atheism\train_docs
      
     unigram_prob, bigram_prob = find_ngram_prob(data)
      
+    print(unigram_prob["-/s-"])
+ 
     if n == 1:
         prob_table = unigram_prob
     elif n == 2:
@@ -166,13 +169,11 @@ def main():
     else:
         print("Can only do unigram and bigram\n")
      
-#     print(prob_table)
 
     start_of_sentence = input("Enter partial sentence that you want completed (or leave empty for new sentence) \n")
     if start_of_sentence == "":
         start_of_sentence = "-s-"
     for _ in range(0,5):
-#         print(rand_sentence(prob_table, n))
         print(rand_sentence(prob_table, n, start_of_sentence))
 
 
