@@ -39,7 +39,7 @@ def find_ngram_counts(dirname):
                 
                 # Design decision to ignore these special characters
                 if (word == "<" or word == ">" or word == "|" or word == "#" or
-                    word == "'" or word == '"'):
+                    word == "'" or word == '"' or word == '`'):
                     continue
                 
                 # Design decision to ignore every thing that is in parentheses/brackets
