@@ -159,8 +159,8 @@ def main():
     # data_corrected\classification task\atheism\train_docs
      
     unigram_prob, bigram_prob = find_ngram_prob(data)
-     
-    print(unigram_prob["-/s-"])
+
+    #print(unigram_prob["-/s-"])
  
     if n == 1:
         prob_table = unigram_prob
