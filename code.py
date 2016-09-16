@@ -106,6 +106,7 @@ def find_ngram_prob(dirname):
     unigram_probs = {k: v/sum(unigram_counts.values()) for k, v in unigram_counts.items()}
     
     # Bigram probabilities = count(w(n-1) w(n)) / count(w(n-1))
+    # The keys in this dict (W1, W2) represent P(W2 | W1)
     bigram_probs = {k: v/unigram_counts[k[0]] for k, v in bigram_counts.items()}
     
     return unigram_probs, bigram_probs
