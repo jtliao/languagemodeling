@@ -36,9 +36,10 @@ def find_ngram_counts(dirname):
             
             for word in tokens:
                 
-                # Design decision to ignore these special characters
+                # Design decision to ignore these special characters and . inside of words (websites/email addresses)
                 if (word == "<" or word == ">" or word == "|" or word == "#" or
-                    word == "'" or word == '"' or word == '`' or word == '``'):
+                    word == "'" or word == '"' or word == '`' or word == '``' or 
+                    word == "@" or "." in word):
                     continue
                 
                 # Design decision to ignore every thing that is in parentheses/brackets

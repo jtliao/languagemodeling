@@ -5,7 +5,7 @@ import math
 import code
 
 
-def calc_bigram_perplexity(bigram_probs, tokens):
+def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
     token_length = len(tokens)
     
     # Use bigram probabilities to calculate perplexity
@@ -19,7 +19,7 @@ def calc_bigram_perplexity(bigram_probs, tokens):
         if pair in bigram_probs:
             prob_of_pair = bigram_probs[pair]
         else:
-            prob_of_pair = 0
+            prob_of_pair = unknown_bigram_prob
                     
         summation += (-math.log(prob_of_pair))
                 
@@ -43,7 +43,7 @@ def calc_unigram_perplexity(unigram_probs, tokens):
         if token in unigram_probs:
             prob_of_token = unigram_probs[token]
         else:
-            prob_of_token = 0
+            prob_of_token = unigram_probs["unk"]
                     
         summation += (-math.log(prob_of_token))
                 
@@ -76,7 +76,7 @@ def calc_all_perplexities(topics_dir):
 def predict_topic(topics_dir, pred_filename):
     topic_to_unigram_dict, topic_to_bigram_dict = get_topic_to_ngram_dict(topics_dir)
     #set to max int value
-    min_bigram_perplexity = 100000
+    min_bigram_perplexity = 1000000
     best_bigram_topic_guess = ""
     
     with open(pred_filename, "r") as f:
@@ -90,7 +90,7 @@ def predict_topic(topics_dir, pred_filename):
                 best_bigram_topic_guess = topic
                 
                 
-    min_unigram_perplexity = 100000
+    min_unigram_perplexity = 1000000
     best_unigram_topic_guess = ""
     
     with open(pred_filename, "r") as f:
@@ -149,7 +149,7 @@ def classify_topics(topics_dir):
         smoothing_param = i
         #TODO -- actual hyperparameter tuning
         
-        # For computing accuracty
+        # For computing accuracy
         num_correct = 0
         num_total = 0
         
