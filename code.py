@@ -33,7 +33,7 @@ def find_ngram_counts(dirname):
             is_inside_brackets = False
             
             prev_word = None
-            
+            unk_words = set()
             for word in tokens:
                 
                 # Design decision to ignore these special characters and . inside of words (websites/email addresses)
@@ -65,9 +65,18 @@ def find_ngram_counts(dirname):
                 
                 # Design decision to ignore case
                 word = word.lower()
-               
+
                 if word not in unigram_counts:
-                    unigram_counts[word] = 1
+                    if word not in unk_words:
+                        unk_words.add(word)
+                        word = 'unk'
+                        if 'unk' not in unigram_counts:
+                            unigram_counts['unk'] = 1
+                        else:
+                            unigram_counts['unk'] += 1
+                    else:
+                        unigram_counts[word] = 1
+                        unk_words.remove(word)
                 else:
                     unigram_counts[word] += 1
                 
@@ -103,6 +112,8 @@ def find_ngram_counts(dirname):
 
 def find_ngram_prob(dirname):
     unigram_counts, bigram_counts = find_ngram_counts(dirname)
+    unigram_counts = smooth(unigram_counts, 1, 3)[0]
+    bigram_counts, count_zero = smooth(bigram_counts, 2, 3)
     
     unigram_probs = {k: v/sum(unigram_counts.values()) for k, v in unigram_counts.items()}
     
@@ -152,6 +163,35 @@ def rand_sentence(prob_table, n, start_of_sentence='-s-'):
     return sentence
 
 
+def smooth(counts, n, t):
+    N = {} #count of counts
+    new_count = {} #the adjusted counts for changed counts
+    total_count = 0
+    #populate N with counts of counts
+    for val in counts.values():
+        total_count += val
+        if val not in N:
+            N[val] = 1
+        else:
+            N[val] += 1
+    #if n=1, c=0 doesn't happen, adjust counts accordingly
+    if n == 1:
+        N[0] = 0
+        for c in range(1, t):
+            new_count[c] = (c+1)*N[c+1]/N[c]
+    #if n=2, c=0 is the bigrams that have not occurred, adjust counts accordingly
+    if n == 2:
+        V = len(counts)
+        N[0] = (V**2) - total_count
+        for c in range(0, t):
+            new_count[c] = (c+1)*N[c+1]/N[c]
+    #traverse through counts, if count has been smoothed, then change the value in counts
+    for key, value in counts.items():
+        if value in new_count:
+            counts[key] = new_count[value]
+    return counts, N[0]
+
+
 def main():
     n = int(input("Enter value of n (only 1 or 2)\n"))
 #     text = ""
@@ -170,7 +210,7 @@ def main():
         prob_table = bigram_prob
     else:
         print("Can only do unigram and bigram\n")
-     
+    print(prob_table)
 
     start_of_sentence = input("Enter partial sentence that you want completed (or leave empty for new sentence) \n")
     if start_of_sentence == "":
