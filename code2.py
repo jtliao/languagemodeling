@@ -5,7 +5,7 @@ import math
 import code
 
 
-def calc_perplexity(bigram_probs, tokens):
+def calc_bigram_perplexity(bigram_probs, tokens):
     token_length = len(tokens)
     
     # Use bigram probabilities to calculate perplexity
@@ -29,6 +29,29 @@ def calc_perplexity(bigram_probs, tokens):
     print(pp)
     return pp
 
+
+def calc_unigram_perplexity(unigram_probs, tokens):
+    token_length = len(tokens)
+    
+    # Use bigram probabilities to calculate perplexity
+    
+    summation = 0
+    for token in tokens:
+        token = token.lower()
+                    
+        # Fix when we get smoothing to work
+        if token in unigram_probs:
+            prob_of_token = unigram_probs[token]
+        else:
+            prob_of_token = 0
+                    
+        summation += (-math.log(prob_of_token))
+                
+                
+    pp = math.exp(1/token_length * summation)
+    print(pp)
+    return pp
+
 # topics_dir in our case is "data_corrected/classification task"
 def calc_all_perplexities(topics_dir):
     perplexity_table = {}
@@ -40,41 +63,61 @@ def calc_all_perplexities(topics_dir):
             
             tokens = nltk.word_tokenize(test_text)
             
-            topic_to_bigram_dict = get_topic_to_bigram_dict(topics_dir)
+            topic_to_ngram_dict = get_topic_to_ngram_dict(topics_dir)
             
-            for topic, bigram_probs in topic_to_bigram_dict.items():
-                pp = calc_perplexity(bigram_probs, tokens)
-                perplexity_table[filename][topic] = pp
+            for topic, (unigram_probs, bigram_probs) in topic_to_ngram_dict.items():
+                unigram_pp = calc_unigram_perplexity(unigram_probs, tokens)
+                bigram_pp = calc_bigram_perplexity(bigram_probs, tokens)
+                perplexity_table[filename][topic] = (unigram_pp, bigram_pp)
+    return perplexity_table
                 
 # Simple classification is just computing perplexity for topic
 # and seeing which topic gives the lowest perplexity                
 def predict_topic(topics_dir, pred_filename):
-    topic_to_bigram_dict = get_topic_to_bigram_dict(topics_dir)
+    topic_to_unigram_dict, topic_to_bigram_dict = get_topic_to_ngram_dict(topics_dir)
     #set to max int value
-    min_perplexity = 100000
-    best_topic_guess = ""
+    min_bigram_perplexity = 100000
+    best_bigram_topic_guess = ""
     
     with open(pred_filename, "r") as f:
         text = f.readline()
         tokens = nltk.word_tokenize(text)
     
         for topic, bigram_probs in topic_to_bigram_dict.items():
-            pp = calc_perplexity(bigram_probs, tokens)
-            if pp < min_perplexity:
-                min_perplexity = pp
-                best_topic_guess = topic
-    return best_topic_guess
+            pp = calc_bigram_perplexity(bigram_probs, tokens)
+            if pp < min_bigram_perplexity:
+                min_bigram_perplexity = pp
+                best_bigram_topic_guess = topic
+                
+                
+    min_unigram_perplexity = 100000
+    best_unigram_topic_guess = ""
     
-def get_topic_to_bigram_dict(topics_dir):
-    topic_to_bigram_dict = {}
+    with open(pred_filename, "r") as f:
+        text = f.readline()
+        tokens = nltk.word_tokenize(text)
+    
+        for topic, unigram_probs in topic_to_unigram_dict.items():
+            pp = calc_unigram_perplexity(unigram_probs, tokens)
+            if pp < min_unigram_perplexity:
+                min_unigram_perplexity = pp
+                best_unigram_topic_guess = topic
+                
+                
+    return (best_bigram_topic_guess, best_unigram_topic_guess)
+
+    
+def get_topic_to_ngram_dict(topics_dir):
+    topic_to_ngram_dict = {}
     for topic in os.listdir(topics_dir):
         # Get all topic directories besides test dir
         if topics_dir == "test_for_classification":
             continue
-        [_, bigram_probs] = code.find_ngram_prob(
+        [unigram_probs, bigram_probs] = code.find_ngram_prob(
             os.path.join(topics_dir, topic, "train_docs"))     
-        topic_to_bigram_dict[topic] = bigram_probs
-    return topic_to_bigram_dict           
+        topic_to_ngram_dict[topic] = (unigram_probs, bigram_probs)
+    return topic_to_ngram_dict    
+         
 
 # I split them manually instead (first 61 in validation, rest in training)
 # def split_training_and_validation(topics_dir):
