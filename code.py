@@ -182,7 +182,7 @@ def smooth(counts, n, t):
     #if n=2, c=0 is the bigrams that have not occurred, adjust counts accordingly
     if n == 2:
         V = len(counts)
-        N[0] = (V**2) - total_count
+        N[0] = ((V**2) - total_count)/(V**2)
         for c in range(0, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
     #traverse through counts, if count has been smoothed, then change the value in counts
