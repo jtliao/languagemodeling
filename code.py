@@ -176,7 +176,7 @@ def smooth(counts, n, t):
             N[val] += 1
     #if n=1, c=0 doesn't happen, adjust counts accordingly
     if n == 1:
-        N[0] = 0
+        new_count[0] = 0
         for c in range(1, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
     #if n=2, c=0 is the bigrams that have not occurred, adjust counts accordingly
@@ -189,7 +189,7 @@ def smooth(counts, n, t):
     for key, value in counts.items():
         if value in new_count:
             counts[key] = new_count[value]
-    return counts, N[0]
+    return counts, new_count[0]
 
 
 def main():
