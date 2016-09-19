@@ -29,39 +29,41 @@ def find_ngram_counts(dirname):
 #             print(tokens)
             
             # Alternative: use counts of '(' ')' and '[' ']' but people forget to close their parentheses/brackets...
-            is_inside_parens = False
-            is_inside_brackets = False
-            
+#             is_inside_parens = False
+#             is_inside_brackets = False
+                        
             prev_word = None
             unk_words = set()
             for word in tokens:
                 
+                
+                
                 # Design decision to ignore these special characters and . inside of words (websites/email addresses)
                 if (word == "<" or word == ">" or word == "|" or word == "#" or
                     word == "'" or word == '"' or word == '`' or word == '``' or 
-                    word == "@" or "." in word):
+                    word == "@" or "." in word or word == "(" or word == ")"):
                     continue
                 
                 # Design decision to ignore every thing that is in parentheses/brackets
                 # because this information is by definition superfluous
-                elif word == "(":
-                    is_inside_parens = True
-                    continue
-                
-                elif word == "[":
-                    is_inside_brackets = True
-                    continue
-                
-                elif word == ")":
-                    is_inside_parens = False
-                    continue
-                
-                elif word == "]":
-                    is_inside_brackets = False
-                    continue
-                
-                if is_inside_parens or is_inside_brackets:
-                    continue
+#                 elif word == "(":
+#                     is_inside_parens = True
+#                     continue
+#                 
+#                 elif word == "[":
+#                     is_inside_brackets = True
+#                     continue
+#                 
+#                 elif word == ")":
+#                     is_inside_parens = False
+#                     continue
+#                 
+#                 elif word == "]":
+#                     is_inside_brackets = False
+#                     continue
+#                 
+#                 if is_inside_parens or is_inside_brackets:
+#                     continue
                 
                 # Design decision to ignore case
                 word = word.lower()
@@ -90,9 +92,9 @@ def find_ngram_counts(dirname):
                     
                 prev_word = word
                 
-            if is_inside_parens or is_inside_brackets:
-                print("UNCLOSED PARENS/BRACKETS\n")
-                print(filename)
+#             if is_inside_parens or is_inside_brackets:
+#                 print("UNCLOSED PARENS/BRACKETS\n")
+#                 print(filename)
     
 #     ln = len(tokens)
 #     a = {}
@@ -153,6 +155,8 @@ def rand_sentence(prob_table, n, start_of_sentence='-s-'):
                 if k[0] == match:
                     ngram.append(k)
                     prob.append(prob_table.get(k))
+            prob = np.array(prob) / np.sum(prob) 
+#             print(prob)
             match = ngram[np.random.choice(len(ngram), 1, p=prob)[0]][1]
         if (match == '.') or (match == ',') or (match == '!') or (match == '?'):
             is_punct = True
@@ -167,6 +171,7 @@ def smooth(counts, n, t):
     N = {} #count of counts
     new_count = {} #the adjusted counts for changed counts
     total_count = 0
+    V = len(counts)
     #populate N with counts of counts
     for val in counts.values():
         total_count += val
@@ -181,7 +186,7 @@ def smooth(counts, n, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
     #if n=2, c=0 is the bigrams that have not occurred, adjust counts accordingly
     if n == 2:
-        V = len(counts)
+        
         N[0] = (V**2) - total_count
         for c in range(0, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
@@ -189,7 +194,7 @@ def smooth(counts, n, t):
     for key, value in counts.items():
         if value in new_count:
             counts[key] = new_count[value]
-    return counts, new_count[0]/V**2
+    return counts, new_count[0]/V
 
 
 def main():
@@ -200,7 +205,7 @@ def main():
     
     # data_corrected\classification task\atheism\train_docs
      
-    unigram_prob, bigram_prob = find_ngram_prob(data)
+    unigram_prob, bigram_prob,_ = find_ngram_prob(data)
 
     #print(unigram_prob["-/s-"])
  
@@ -210,7 +215,15 @@ def main():
         prob_table = bigram_prob
     else:
         print("Can only do unigram and bigram\n")
-    print(prob_table)
+        
+#     unigram_counts, bigram_counts = find_ngram_counts(data)
+#     print(len(bigram_counts.keys()))
+#     
+#     sum=0
+#     for key, val in bigram_counts.items():
+#         sum+=val
+#     print(sum)
+#     print(prob_table)
 
     start_of_sentence = input("Enter partial sentence that you want completed (or leave empty for new sentence) \n")
     if start_of_sentence == "":
