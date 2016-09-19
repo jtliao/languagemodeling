@@ -121,7 +121,7 @@ def find_ngram_prob(dirname):
     # The keys in this dict (W1, W2) represent P(W2 | W1)
     bigram_probs = {k: v/unigram_counts[k[0]] for k, v in bigram_counts.items()}
     
-    return unigram_probs, bigram_probs
+    return unigram_probs, bigram_probs, count_zero
 
 
 #remove used words? how to deal with multiple punctuation in a row?
