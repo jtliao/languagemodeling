@@ -96,9 +96,6 @@ def find_ngram_counts(dirname):
                     
         prev_word = word
                 
-#             if is_inside_parens or is_inside_brackets:
-#                 print("UNCLOSED PARENS/BRACKETS\n")
-#                 print(filename)
     
 #     ln = len(tokens)
 #     a = {}
@@ -114,36 +111,15 @@ def find_ngram_counts(dirname):
 #         else:
 #             a[token_list] = (1./ln)
 
-# 
-#                 
-#     for (word1, word2), count in bigram_counts.items():
-#         first_item = word1
-#         second_item = word2
-#         
-#         if word1 in unk_words:
-#             first_item = "unk"
-#         if word2 in unk_words:
-#             second_item = "unk"
-#         
-#         if first_item != word1 or second_item != word2:
-#             new_tuple = (first_item, second_item)
-#             
-#             del bigram_counts[(word, word2)]
-#             
-#             if new_tuple in unigram_counts:
-#                 unigram_counts[new_tuple] += 1
-#             else:
-#                 unigram_counts[new_tuple] = 1
-#     
-
     return unigram_counts, bigram_counts
 
 
 def find_ngram_prob(dirname, smoothing_param=3):
     unigram_counts, bigram_counts = find_ngram_counts(dirname)
-    unigram_counts = smooth(unigram_counts, 1, smoothing_param)
+    num_word_types = len(unigram_counts)
+    unigram_counts = smooth(unigram_counts, 1, num_word_types, smoothing_param)
 #     print(bigram_counts)
-    bigram_counts, count_zero = smooth(bigram_counts, 2, smoothing_param)
+    bigram_counts, count_zero = smooth(bigram_counts, 2, num_word_types, smoothing_param)
     
     unigram_probs = {k: v/sum(unigram_counts.values()) for k, v in unigram_counts.items()}
     
@@ -195,11 +171,12 @@ def rand_sentence(prob_table, n, start_of_sentence='-s-'):
     return sentence
 
 
-def smooth(counts, n, t):
+def smooth(counts, n, num_word_types, t):
     N = {} #count of counts
     new_count = {} #the adjusted counts for changed counts
     total_count = 0
-    V = len(counts)
+#     V = len(counts)
+    
     #populate N with counts of counts
     for val in counts.values():
 #         print(val)
@@ -210,14 +187,18 @@ def smooth(counts, n, t):
             N[val] += 1
     #if n=1, c=0 doesn't happen, adjust counts accordingly
     if n == 1:
-        new_count[0] = 0
+#         new_count[0] = 0
 #         for c in range(1, t):
         for c in range(2, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
     #if n=2, c=0 is the bigrams that have not occurred, adjust counts accordingly
     if n == 2:
+        V = num_word_types
+        num_bigram_types_seen = len(counts)
+        N[0] = (V**2) - num_bigram_types_seen
         
-        N[0] = (V**2) - total_count
+#         print((V**2) - num_bigram_types_seen)
+#         print(len(counts)**2 - total_count)
         for c in range(0, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
     #traverse through counts, if count has been smoothed, then change the value in counts
@@ -252,15 +233,15 @@ def main():
     unigram_counts, bigram_counts = find_ngram_counts(data)
 #     print(len(bigram_counts.keys()))
 #     print(bigram_prob[("unk","unk")])
-    print(unigram_prob)
-#     
-    sum=0
-    num_keys=0
-    for key, val in unigram_counts.items():
-        sum+=val
-        num_keys += 1
-    print(sum)
-    print(num_keys)
+#     print(unigram_prob)
+# #     
+#     sum=0
+#     num_keys=0
+#     for key, val in unigram_counts.items():
+#         sum+=val
+#         num_keys += 1
+#     print(sum)
+#     print(num_keys)
     
 #     print(prob_table)
 

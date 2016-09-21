@@ -10,59 +10,78 @@ sentence_detector = nltk.data.load("tokenizers/punkt/english.pickle")
 
 
 def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
-    token_length = len(tokens)
+    token_length = 0
     
     # Use bigram probabilities to calculate perplexity
-    prev_token = "-s-"
+    prev_word = None
     summation = 0
     
     unknown_count = 0
     known_count = 0
     
     for token in tokens:
-        token = token.lower()
-                    
-        pair = (prev_token, token)
-        # Fix when we get smoothing to work
-        if pair in bigram_probs:
-            prob_of_pair = bigram_probs[pair]
-#             print("seen " + str(prob_of_pair))
-            unknown_count += 1
-        else:
-            prob_of_pair = .1
-#             print("unseen " + str(unknown_bigram_prob))
-            known_count += 1
-                 
-#         print("Bigram " + str(prob_of_pair))
-        summation += (-math.log(prob_of_pair))
+        word = token.lower()
+        
+        if (word == "<" or word == ">" or word == "|" or word == "#" or
+            word == "'" or word == '"' or word == '`' or word == '``' or 
+            word == "@" or "." in word or word == "(" or word == ")"):
+                continue
+            
+        token_length += 1
+        
+        # Don't do any calc for first -s- (no previous word)
+        if prev_word is not None:
+            pair = (prev_word, word)
+            # Fix when we get smoothing to work
+            if pair in bigram_probs:
+                prob_of_pair = bigram_probs[pair]
+    #             print("seen " + str(prob_of_pair))
+                unknown_count += 1
+            else:
+#                 prob_of_pair = .1
+                prob_of_pair = unknown_bigram_prob
+    #             print("unseen " + str(unknown_bigram_prob))
+                known_count += 1
+            print(prob_of_pair)
+    #         print("Bigram " + str(prob_of_pair))
+            summation += (-math.log(prob_of_pair))
+#             print(summation / token_length)
                 
-        prev_token = token
-#     print("unknown " + str(unknown_count))
-#     print("known " + str(known_count))
+        prev_word = word
+    print(unknown_bigram_prob)
+    print("unknown " + str(unknown_count))
+    print("known " + str(known_count))
     pp = math.exp(1/token_length * summation)
 #     print(pp)
     return pp
 
 
 def calc_unigram_perplexity(unigram_probs, tokens):
-    token_length = len(tokens)
-    
-    # Use bigram probabilities to calculate perplexity
+    token_length = 0
     
     summation = 0
     for token in tokens:
-        token = token.lower()
-                    
+        word = token.lower()
+        
+        if (word == "<" or word == ">" or word == "|" or word == "#" or
+            word == "'" or word == '"' or word == '`' or word == '``' or 
+            word == "@" or "." in word or word == "(" or word == ")"):
+                continue
+        token_length += 1
         # Fix when we get smoothing to work
-        if token in unigram_probs:
-            prob_of_token = unigram_probs[token]
+        if word in unigram_probs:
+            prob_of_token = unigram_probs[word]
         else:
             prob_of_token = unigram_probs["unk"]
                     
 #         print("unigram " + str(prob_of_token))
+#         print(word + " " + str(prob_of_token))
+#         print(-math.log(prob_of_token))
+
         summation += (-math.log(prob_of_token))
+#         print(summation / token_length)
                 
-                
+    print(1/token_length * summation) 
     pp = math.exp(1/token_length * summation)
 #     print(pp)
     return pp
@@ -219,9 +238,9 @@ def main():
     
 #     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)
     
-    print(calc_all_perplexities("data_corrected/classification task"))
-    
+    calc_all_perplexities("data_corrected/classification task")
 #     print(calc_all_perplexities("data_corrected/classification task"))
+
 #     print(predict_topic("data_corrected/classification task", "data_corrected/classification task/test_for_classification/file_186.txt"))
 #     print(classify_topics("data_corrected/classification task", topic_to_ngram_dict))
 
