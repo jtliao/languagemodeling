@@ -15,6 +15,10 @@ def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
     # Use bigram probabilities to calculate perplexity
     prev_token = "-s-"
     summation = 0
+    
+    unknown_count = 0
+    known_count = 0
+    
     for token in tokens:
         token = token.lower()
                     
@@ -22,16 +26,19 @@ def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
         # Fix when we get smoothing to work
         if pair in bigram_probs:
             prob_of_pair = bigram_probs[pair]
-            print(prob_of_pair)
+#             print("seen " + str(prob_of_pair))
+            unknown_count += 1
         else:
-            prob_of_pair = unknown_bigram_prob
-            print(unknown_bigram_prob)
+            prob_of_pair = .1
+#             print("unseen " + str(unknown_bigram_prob))
+            known_count += 1
                  
 #         print("Bigram " + str(prob_of_pair))
         summation += (-math.log(prob_of_pair))
                 
         prev_token = token
-                    
+#     print("unknown " + str(unknown_count))
+#     print("known " + str(known_count))
     pp = math.exp(1/token_length * summation)
 #     print(pp)
     return pp
@@ -90,8 +97,7 @@ def calc_all_perplexities(topics_dir):
                 
 # Simple classification is just computing perplexity for topic
 # and seeing which topic gives the lowest perplexity                
-def predict_topic(topics_dir, pred_filename):
-    topic_to_ngram_dict = get_topic_to_ngram_dict(topics_dir)
+def predict_topic(topics_dir, pred_filename, topic_to_ngram_dict, smoothing_param=3):
     #set to max int value
     min_bigram_perplexity = 1000000
     best_bigram_topic_guess = ""
@@ -122,17 +128,17 @@ def predict_topic(topics_dir, pred_filename):
                 min_unigram_perplexity = pp_bigram
                 best_unigram_topic_guess = topic 
                 
-    return (best_bigram_topic_guess, best_unigram_topic_guess)
+    return (best_unigram_topic_guess, best_bigram_topic_guess)
 
     
-def get_topic_to_ngram_dict(topics_dir):
+def get_topic_to_ngram_dict(topics_dir, smoothing_param=3):
     topic_to_ngram_dict = {}
     for topic in os.listdir(topics_dir):
         # Get all topic directories besides test dir
         if topic == "test_for_classification":
             continue
         [unigram_probs, bigram_probs, zero_prob_bigram] = code.find_ngram_prob(
-            os.path.join(topics_dir, topic, "train_docs"))     
+            os.path.join(topics_dir, topic, "train_docs"), smoothing_param)     
         topic_to_ngram_dict[topic] = (unigram_probs, bigram_probs, zero_prob_bigram)
     return topic_to_ngram_dict    
          
@@ -157,41 +163,67 @@ def get_topic_to_ngram_dict(topics_dir):
 #         
 #     return training_file_to_topic_dict, validation_file_to_topic_dict
 
-def classify_topics(topics_dir):
-    best_accuracy = 0
+def classify_topics(topics_dir, topic_to_ngram_dict):
+    best_accuracy_unigram = 0
+    best_accuracy_bigram = 0
     
     #TODO: Change this to actual tuning param
-    best_param = 0
+    best_param_unigram = 0
+    best_param_bigram = 0
+    
     # Tune...
-    for i in range(0,1,0.1):
+    for i in range(3,11):
         smoothing_param = i
         #TODO -- actual hyperparameter tuning
         
         # For computing accuracy
-        num_correct = 0
+        num_correct_unigram = 0
+        num_correct_bigram = 0
+        
         num_total = 0
         
-        for topic in topics_dir:
+        for topic in os.listdir(topics_dir):
+            if topic == "test_for_classification":
+                continue
+            
             for validation_file in os.listdir(
                 os.path.join(topics_dir, topic, "validation_docs")):
                 
-                topic_predicted = predict_topic(topics_dir, validation_file)
+                validation_file = os.path.join(topics_dir, topic, "validation_docs", validation_file)
                 
-                if topic == topic_predicted:
-                    num_correct += 1
+                (best_unigram_topic_guess, best_bigram_topic_guess) = predict_topic(topics_dir, validation_file, topic_to_ngram_dict, smoothing_param)
+                print((best_unigram_topic_guess, best_bigram_topic_guess))
+                
+                if topic == best_unigram_topic_guess:
+                    num_correct_unigram += 1
+                    
+                if topic == best_bigram_topic_guess:
+                    num_correct_bigram += 1
                     
                 num_total += 1
                 
-        accuracy = num_correct / num_total
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
-            best_param = smoothing_param
+        accuracy_unigram = num_correct_unigram / num_total
+        accuracy_bigram = num_correct_bigram / num_total
+        
+        if accuracy_unigram > best_accuracy_unigram:
+            best_accuracy_unigram = accuracy_unigram
+            best_param_unigram = smoothing_param
             
-    return best_accuracy, best_param
+        if accuracy_bigram > best_accuracy_bigram:
+            best_accuracy_bigram = accuracy_bigram
+            best_param_bigram = smoothing_param
+            
+    return best_accuracy_unigram, best_param_unigram, best_accuracy_bigram, best_param_bigram
                 
 def main():
-    calc_all_perplexities("data_corrected/classification task")
     
+#     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)
+    
+    print(calc_all_perplexities("data_corrected/classification task"))
+    
+#     print(calc_all_perplexities("data_corrected/classification task"))
+#     print(predict_topic("data_corrected/classification task", "data_corrected/classification task/test_for_classification/file_186.txt"))
+#     print(classify_topics("data_corrected/classification task", topic_to_ngram_dict))
 
 if __name__ == '__main__':
     main()

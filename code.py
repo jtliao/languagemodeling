@@ -3,7 +3,6 @@ import nltk.data
 import numpy as np
 import os
 
-from email.parser import Parser
 
 # data_corrected\classification task\atheism\train_docs
 
@@ -14,6 +13,8 @@ def find_ngram_counts(dirname):
     unigram_counts = {}
     bigram_counts = {}
     
+    unk_words = set()
+    all_tokens = []
     for filename in os.listdir(dirname):
         with open(os.path.join(dirname,filename), 'r') as f:
             text = f.readline()
@@ -26,16 +27,9 @@ def find_ngram_counts(dirname):
             
             # Tokenize the sentences by words
             tokens = nltk.word_tokenize(" ".join(added_sentence_tags_list))
-#             print(tokens)
             
-            # Alternative: use counts of '(' ')' and '[' ']' but people forget to close their parentheses/brackets...
-#             is_inside_parens = False
-#             is_inside_brackets = False
-                        
-            prev_word = None
-            unk_words = set()
+#             unk_words = set()
             for word in tokens:
-                
                 
                 
                 # Design decision to ignore these special characters and . inside of words (websites/email addresses)
@@ -43,54 +37,64 @@ def find_ngram_counts(dirname):
                     word == "'" or word == '"' or word == '`' or word == '``' or 
                     word == "@" or "." in word or word == "(" or word == ")"):
                     continue
-                
-                # Design decision to ignore every thing that is in parentheses/brackets
-                # because this information is by definition superfluous
-#                 elif word == "(":
-#                     is_inside_parens = True
-#                     continue
-#                 
-#                 elif word == "[":
-#                     is_inside_brackets = True
-#                     continue
-#                 
-#                 elif word == ")":
-#                     is_inside_parens = False
-#                     continue
-#                 
-#                 elif word == "]":
-#                     is_inside_brackets = False
-#                     continue
-#                 
-#                 if is_inside_parens or is_inside_brackets:
-#                     continue
-                
+
                 # Design decision to ignore case
                 word = word.lower()
+                
+                all_tokens.append(word)
 
                 if word not in unigram_counts:
-                    if word not in unk_words:
-                        unk_words.add(word)
-                        word = 'unk'
-                        if 'unk' not in unigram_counts:
-                            unigram_counts['unk'] = 1
-                        else:
-                            unigram_counts['unk'] += 1
-                    else:
-                        unigram_counts[word] = 1
-                        unk_words.remove(word)
+#                     if word not in unk_words:
+#                         unk_words.add(word)
+#                         word = 'unk'
+#                         if 'unk' not in unigram_counts:
+#                             unigram_counts['unk'] = 1
+#                         else:
+#                             unigram_counts['unk'] += 1
+#                     else:
+#                         unigram_counts[word] = 1
+#                         unk_words.remove(word)
+                    unigram_counts[word] = 1
                 else:
                     unigram_counts[word] += 1
-                
-                # Cannot compute bigram for first pass
-                if prev_word is not None:
-                    pair = (prev_word, word)
-                    if pair not in bigram_counts:
-                        bigram_counts[pair] = 1
-                    else:
-                        bigram_counts[pair] += 1
                     
-                prev_word = word
+        
+    for unigram, count in unigram_counts.items():
+        if count == 1:
+            word = unigram
+            unk_words.add(word)
+    if len(unk_words) != 0:
+        for word in unk_words:
+            del unigram_counts[word]
+        unigram_counts["unk"] = len(unk_words)
+        
+        
+#     for filename in os.listdir(dirname):
+#         with open(os.path.join(dirname,filename), 'r') as f:   
+#             text = f.readline()
+#             
+#             sentence_list = sentence_detector.tokenize(text)
+# 
+#             # Add sentence boundary tags to each sentence
+#             added_sentence_tags_list = ["-s- " + sentence + " -/s-" for sentence in sentence_list]
+# #             print(added_sentence_tags_list)
+#             
+#             # Tokenize the sentences by words
+#             tokens = nltk.word_tokenize(" ".join(added_sentence_tags_list))
+
+    prev_word = None
+    for word in all_tokens:
+        if word in unk_words:
+            word = "unk"
+        # Cannot compute bigram for first pass
+        if prev_word is not None:
+            pair = (prev_word, word)
+            if pair not in bigram_counts:
+                bigram_counts[pair] = 1
+            else:
+                bigram_counts[pair] += 1
+                    
+        prev_word = word
                 
 #             if is_inside_parens or is_inside_brackets:
 #                 print("UNCLOSED PARENS/BRACKETS\n")
@@ -109,13 +113,37 @@ def find_ngram_counts(dirname):
 #             a[token_list] += (1./ln)
 #         else:
 #             a[token_list] = (1./ln)
+
+# 
+#                 
+#     for (word1, word2), count in bigram_counts.items():
+#         first_item = word1
+#         second_item = word2
+#         
+#         if word1 in unk_words:
+#             first_item = "unk"
+#         if word2 in unk_words:
+#             second_item = "unk"
+#         
+#         if first_item != word1 or second_item != word2:
+#             new_tuple = (first_item, second_item)
+#             
+#             del bigram_counts[(word, word2)]
+#             
+#             if new_tuple in unigram_counts:
+#                 unigram_counts[new_tuple] += 1
+#             else:
+#                 unigram_counts[new_tuple] = 1
+#     
+
     return unigram_counts, bigram_counts
 
 
-def find_ngram_prob(dirname):
+def find_ngram_prob(dirname, smoothing_param=3):
     unigram_counts, bigram_counts = find_ngram_counts(dirname)
-    unigram_counts = smooth(unigram_counts, 1, 3)[0]
-    bigram_counts, count_zero = smooth(bigram_counts, 2, 3)
+    unigram_counts = smooth(unigram_counts, 1, smoothing_param)
+#     print(bigram_counts)
+    bigram_counts, count_zero = smooth(bigram_counts, 2, smoothing_param)
     
     unigram_probs = {k: v/sum(unigram_counts.values()) for k, v in unigram_counts.items()}
     
@@ -174,6 +202,7 @@ def smooth(counts, n, t):
     V = len(counts)
     #populate N with counts of counts
     for val in counts.values():
+#         print(val)
         total_count += val
         if val not in N:
             N[val] = 1
@@ -182,7 +211,8 @@ def smooth(counts, n, t):
     #if n=1, c=0 doesn't happen, adjust counts accordingly
     if n == 1:
         new_count[0] = 0
-        for c in range(1, t):
+#         for c in range(1, t):
+        for c in range(2, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
     #if n=2, c=0 is the bigrams that have not occurred, adjust counts accordingly
     if n == 2:
@@ -194,16 +224,19 @@ def smooth(counts, n, t):
     for key, value in counts.items():
         if value in new_count:
             counts[key] = new_count[value]
-    return counts, new_count[0]/V
+
+    if n == 1:
+        return counts
+    return counts, new_count[0]/total_count
 
 
 def main():
-    n = int(input("Enter value of n (only 1 or 2)\n"))
+#     n = int(input("Enter value of n (only 1 or 2)\n"))
 #     text = ""
      
-    data = input("Enter file or directory name of corpus: \n")
-    
-    # data_corrected\classification task\atheism\train_docs
+#     data = input("Enter file or directory name of corpus: \n")
+    n=2
+    data = r"data_corrected\classification task\atheism\train_docs"
      
     unigram_prob, bigram_prob,_ = find_ngram_prob(data)
 
@@ -216,20 +249,26 @@ def main():
     else:
         print("Can only do unigram and bigram\n")
         
-#     unigram_counts, bigram_counts = find_ngram_counts(data)
+    unigram_counts, bigram_counts = find_ngram_counts(data)
 #     print(len(bigram_counts.keys()))
+#     print(bigram_prob[("unk","unk")])
+    print(unigram_prob)
 #     
-#     sum=0
-#     for key, val in bigram_counts.items():
-#         sum+=val
-#     print(sum)
+    sum=0
+    num_keys=0
+    for key, val in unigram_counts.items():
+        sum+=val
+        num_keys += 1
+    print(sum)
+    print(num_keys)
+    
 #     print(prob_table)
 
-    start_of_sentence = input("Enter partial sentence that you want completed (or leave empty for new sentence) \n")
-    if start_of_sentence == "":
-        start_of_sentence = "-s-"
-    for _ in range(0,5):
-        print(rand_sentence(prob_table, n, start_of_sentence))
+#     start_of_sentence = input("Enter partial sentence that you want completed (or leave empty for new sentence) \n")
+#     if start_of_sentence == "":
+#         start_of_sentence = "-s-"
+#     for _ in range(0,5):
+#         print(rand_sentence(prob_table, n, start_of_sentence))
 
 
 if __name__ == '__main__':
