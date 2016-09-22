@@ -208,7 +208,8 @@ def smooth(counts, n, num_word_types, t):
 
     if n == 1:
         return counts
-    return counts, new_count[0]/total_count
+#     return counts, new_count[0]/total_count
+    return counts, new_count[0]
 
 
 def main():

@@ -1,3 +1,4 @@
+import csv
 import os
 import nltk
 import nltk.data
@@ -42,15 +43,15 @@ def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
                 prob_of_pair = unknown_bigram_prob
     #             print("unseen " + str(unknown_bigram_prob))
                 known_count += 1
-            print(prob_of_pair)
+#             print(prob_of_pair)
     #         print("Bigram " + str(prob_of_pair))
             summation += (-math.log(prob_of_pair))
 #             print(summation / token_length)
                 
         prev_word = word
-    print(unknown_bigram_prob)
-    print("unknown " + str(unknown_count))
-    print("known " + str(known_count))
+#     print(unknown_bigram_prob)
+#     print("unknown " + str(unknown_count))
+#     print("known " + str(known_count))
     pp = math.exp(1/token_length * summation)
 #     print(pp)
     return pp
@@ -81,7 +82,7 @@ def calc_unigram_perplexity(unigram_probs, tokens):
         summation += (-math.log(prob_of_token))
 #         print(summation / token_length)
                 
-    print(1/token_length * summation) 
+#     print(1/token_length * summation) 
     pp = math.exp(1/token_length * summation)
 #     print(pp)
     return pp
@@ -118,10 +119,10 @@ def calc_all_perplexities(topics_dir):
 # and seeing which topic gives the lowest perplexity                
 def predict_topic(topics_dir, pred_filename, topic_to_ngram_dict, smoothing_param=3):
     #set to max int value
-    min_bigram_perplexity = 1000000
+    min_bigram_perplexity = 1000000000
     best_bigram_topic_guess = ""
     
-    min_unigram_perplexity = 1000000
+    min_unigram_perplexity = 1000000000
     best_unigram_topic_guess = ""
     
     with open(pred_filename, "r") as f:
@@ -182,19 +183,19 @@ def get_topic_to_ngram_dict(topics_dir, smoothing_param=3):
 #         
 #     return training_file_to_topic_dict, validation_file_to_topic_dict
 
-def classify_topics(topics_dir, topic_to_ngram_dict):
+def classify_topics_validation(topics_dir):
     best_accuracy_unigram = 0
     best_accuracy_bigram = 0
     
-    #TODO: Change this to actual tuning param
     best_param_unigram = 0
     best_param_bigram = 0
     
     # Tune...
     for i in range(3,11):
         smoothing_param = i
-        #TODO -- actual hyperparameter tuning
         
+        topic_to_ngram_dict = get_topic_to_ngram_dict(topics_dir, smoothing_param)
+            
         # For computing accuracy
         num_correct_unigram = 0
         num_correct_bigram = 0
@@ -211,7 +212,7 @@ def classify_topics(topics_dir, topic_to_ngram_dict):
                 validation_file = os.path.join(topics_dir, topic, "validation_docs", validation_file)
                 
                 (best_unigram_topic_guess, best_bigram_topic_guess) = predict_topic(topics_dir, validation_file, topic_to_ngram_dict, smoothing_param)
-                print((best_unigram_topic_guess, best_bigram_topic_guess))
+#                 print((best_unigram_topic_guess, best_bigram_topic_guess))
                 
                 if topic == best_unigram_topic_guess:
                     num_correct_unigram += 1
@@ -224,6 +225,9 @@ def classify_topics(topics_dir, topic_to_ngram_dict):
         accuracy_unigram = num_correct_unigram / num_total
         accuracy_bigram = num_correct_bigram / num_total
         
+        print("unigram " + str(i) + " accuracy is " + str(accuracy_unigram))
+        print("bigram " + str(i) + " accuracy is " + str(accuracy_bigram))
+        
         if accuracy_unigram > best_accuracy_unigram:
             best_accuracy_unigram = accuracy_unigram
             best_param_unigram = smoothing_param
@@ -233,16 +237,42 @@ def classify_topics(topics_dir, topic_to_ngram_dict):
             best_param_bigram = smoothing_param
             
     return best_accuracy_unigram, best_param_unigram, best_accuracy_bigram, best_param_bigram
+
+
+
+def classify_topics_test(topics_dir, smoothing_param):
+    topic_to_ngram_dict = get_topic_to_ngram_dict(topics_dir, smoothing_param)
+    
+    topic_to_num = {"atheism": 0,
+                    "autos": 1,
+                    # I use graphics instead of computer_graphics because that's what the dir_name is
+                    "graphics": 2,
+                    "medicine": 3,
+                    "motorcycles": 4,
+                    "religion": 5,
+                    "space": 6}
+    
+    test_dir = os.path.join(topics_dir, "test_for_classification")
+    with open("test_topics.csv", "w") as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(["Id", "Prediction"])
+        for file in os.listdir(test_dir):
+            test_file = os.path.join(test_dir, file)
+            
+            (_, best_bigram_topic_guess) = predict_topic(topics_dir, test_file, topic_to_ngram_dict, smoothing_param)
+            csv_writer.writerow([file, topic_to_num[best_bigram_topic_guess]])
+
+
                 
 def main():
-    
-#     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)
-    
-    calc_all_perplexities("data_corrected/classification task")
+#     calc_all_perplexities("data_corrected/classification task")
 #     print(calc_all_perplexities("data_corrected/classification task"))
 
 #     print(predict_topic("data_corrected/classification task", "data_corrected/classification task/test_for_classification/file_186.txt"))
-#     print(classify_topics("data_corrected/classification task", topic_to_ngram_dict))
+
+#     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)    
+#     print(classify_topics_validation("data_corrected/classification task"))
+    classify_topics_test("data_corrected/classification task", 3)
 
 if __name__ == '__main__':
     main()
