@@ -116,7 +116,7 @@ def find_ngram_prob(dirname, smoothing_param=3):
     # The keys in this dict (W1, W2) represent P(W2 | W1)
     bigram_probs = {k: v/unigram_counts[k[0]] for k, v in bigram_counts.items()}
 
-    trigram_probs = {k: v/(unigram_counts[k[0]]*unigram_counts[k[1]]) for k, v in trigram_counts.items()}
+    trigram_probs = {k: v/bigram_counts[(k[0], k[1])] for k, v in trigram_counts.items()}
     
     return unigram_probs, bigram_probs, trigram_probs, count_zero, count_zero_tri
 
