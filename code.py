@@ -107,8 +107,9 @@ def find_ngram_prob(dirname, smoothing_param=3):
     unigram_counts, bigram_counts, trigram_counts = find_ngram_counts(dirname)
     num_word_types = len(unigram_counts)
     unigram_counts = smooth(unigram_counts, 1, num_word_types, smoothing_param)
-    bigram_counts, count_zero = smooth(bigram_counts, 2, num_word_types, smoothing_param)
+    bigram_counts, count_zero_bi = smooth(bigram_counts, 2, num_word_types, smoothing_param)
     trigram_counts, count_zero_tri = smooth(trigram_counts, 3, num_word_types, smoothing_param)
+    
     
     unigram_probs = {k: v/sum(unigram_counts.values()) for k, v in unigram_counts.items()}
     
@@ -118,7 +119,15 @@ def find_ngram_prob(dirname, smoothing_param=3):
 
     trigram_probs = {k: v/bigram_counts[(k[0], k[1])] for k, v in trigram_counts.items()}
     
-    return unigram_probs, bigram_probs, trigram_probs, count_zero, count_zero_tri
+    for bigram, bigram_count in bigram_counts.items():
+        trigram_probs[bigram] = count_zero_tri / bigram_count
+    trigram_probs["unk"] = count_zero_tri / count_zero_bi
+    
+    for unigram, unigram_count in unigram_counts.items():
+        bigram_probs[unigram] = count_zero_bi / unigram_count
+    
+    
+    return unigram_probs, bigram_probs, trigram_probs, count_zero_bi, count_zero_tri
 
 
 def rand_sentence(prob_table, n, start_of_sentence='-s-'):

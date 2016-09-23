@@ -64,13 +64,20 @@ def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
             # Fix when we get smoothing to work
             if pair in bigram_probs:
                 prob_of_pair = bigram_probs[pair]
-                print("bigram " + str(prob_of_pair))
+#                 print("bigram " + str(prob_of_pair))
             else:
 #                 prob_of_pair = .1
-                prob_of_pair = unknown_bigram_prob
-                print("unk bigram " + str(prob_of_pair))
+#                 prob_of_pair = unknown_bigram_prob
+
+                if prev_word in bigram_probs:
+                    prob_of_pair = bigram_probs[prev_word]
+#                     print("unk bigram " + str(prob_of_pair))
+                else:
+                    prob_of_pair = bigram_probs["unk"]
+#                     print("unk bigram unigram " + str(prob_of_pair))
+
 #             print(prob_of_pair)
-    #         print("Bigram " + str(prob_of_pair))
+#             print("Bigram " + str(prob_of_pair))
             summation += (-math.log(prob_of_pair))
 #             print(summation / token_length)
                 
@@ -104,11 +111,16 @@ def calc_trigram_perplexity(trigram_probs, unknown_trigram_prob, tokens):
             # Fix when we get smoothing to work
             if triple in trigram_probs:
                 prob_of_triple = trigram_probs[triple]
-                print("triple " + str(prob_of_triple))
+#                 print("triple " + str(prob_of_triple))
             else:
-#                 prob_of_pair = .1
-                prob_of_triple = unknown_trigram_prob
-                print("unk triple " + str(prob_of_triple))
+#                 prob_of_triple = unknown_trigram_prob
+                prev_bigram = (two_prev_word, prev_word)
+                if prev_bigram in trigram_probs:
+                    prob_of_triple = trigram_probs[prev_bigram]
+#                     print("unk triple " + str(prob_of_triple))
+                else:
+                    prob_of_triple = trigram_probs["unk"]
+#                     print("unk triple bigram " + str(prob_of_triple))
                 
             summation += (-math.log(prob_of_triple))
 #             print(summation / token_length)
@@ -233,9 +245,11 @@ def get_topic_to_ngram_dict(topics_dir, smoothing_param=3):
 def classify_topics_validation(topics_dir):
     best_accuracy_unigram = 0
     best_accuracy_bigram = 0
+    best_accuracy_trigram = 0
     
     best_param_unigram = 0
     best_param_bigram = 0
+    best_param_trigram = 0
     
     # Tune...
     for i in range(3,11):
@@ -246,6 +260,7 @@ def classify_topics_validation(topics_dir):
         # For computing accuracy
         num_correct_unigram = 0
         num_correct_bigram = 0
+        num_correct_trigram = 0
         
         num_total = 0
         
@@ -258,7 +273,7 @@ def classify_topics_validation(topics_dir):
                 
                 validation_file = os.path.join(topics_dir, topic, "validation_docs", validation_file)
                 
-                (best_unigram_topic_guess, best_bigram_topic_guess) = predict_topic(topics_dir, validation_file, topic_to_ngram_dict, smoothing_param)
+                (best_unigram_topic_guess, best_bigram_topic_guess, best_trigram_topic_guess) = predict_topic(topics_dir, validation_file, topic_to_ngram_dict, smoothing_param)
 #                 print((best_unigram_topic_guess, best_bigram_topic_guess))
                 
                 if topic == best_unigram_topic_guess:
@@ -267,13 +282,18 @@ def classify_topics_validation(topics_dir):
                 if topic == best_bigram_topic_guess:
                     num_correct_bigram += 1
                     
+                if topic == best_trigram_topic_guess:
+                    num_correct_trigram += 1
+                    
                 num_total += 1
                 
         accuracy_unigram = num_correct_unigram / num_total
         accuracy_bigram = num_correct_bigram / num_total
+        accuracy_trigram = num_correct_trigram / num_total
         
         print("unigram " + str(i) + " accuracy is " + str(accuracy_unigram))
         print("bigram " + str(i) + " accuracy is " + str(accuracy_bigram))
+        print("trigram " + str(i) + " accuracy is " + str(accuracy_trigram))
         
         if accuracy_unigram > best_accuracy_unigram:
             best_accuracy_unigram = accuracy_unigram
@@ -283,7 +303,11 @@ def classify_topics_validation(topics_dir):
             best_accuracy_bigram = accuracy_bigram
             best_param_bigram = smoothing_param
             
-    return best_accuracy_unigram, best_param_unigram, best_accuracy_bigram, best_param_bigram
+        if accuracy_trigram > best_accuracy_trigram:
+            best_accuracy_trigram = accuracy_trigram
+            best_param_trigram = smoothing_param
+            
+    return best_accuracy_unigram, best_param_unigram, best_accuracy_bigram, best_param_bigram, best_accuracy_trigram, best_param_trigram
 
 
 
@@ -306,20 +330,22 @@ def classify_topics_test(topics_dir, smoothing_param):
         for file in os.listdir(test_dir):
             test_file = os.path.join(test_dir, file)
             
-            (_, best_bigram_topic_guess) = predict_topic(topics_dir, test_file, topic_to_ngram_dict, smoothing_param)
+#             (_, _, best_trigram_topic_guess) = predict_topic(topics_dir, test_file, topic_to_ngram_dict, smoothing_param)
+#             csv_writer.writerow([file, topic_to_num[best_trigram_topic_guess]])
+            (_, best_bigram_topic_guess, _) = predict_topic(topics_dir, test_file, topic_to_ngram_dict, smoothing_param)
             csv_writer.writerow([file, topic_to_num[best_bigram_topic_guess]])
 
 
                 
 def main():
 #     calc_all_perplexities("data_corrected/classification task")
-    print(calc_all_perplexities("data_corrected/classification task"))
+#     print(calc_all_perplexities("data_corrected/classification task"))
 
 #     print(predict_topic("data_corrected/classification task", "data_corrected/classification task/test_for_classification/file_186.txt"))
 
 #     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)    
 #     print(classify_topics_validation("data_corrected/classification task"))
-#     classify_topics_test("data_corrected/classification task", 3)
+    classify_topics_test("data_corrected/classification task", 10)
 
 if __name__ == '__main__':
     main()
