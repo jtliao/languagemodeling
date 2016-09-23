@@ -25,57 +25,51 @@ def spell_checker(dirname, unigram, bigram):
                     bigram_back = bigram.get((words[ind-1], word)) if ind > 0 else None
                     bigram_forward = bigram.get((word, words[ind+1])) if ind < len(words) - 1 else None
                     conf_probs = []
-                    if bigram_back is not None or bigram_forward is not None:
-                        #find the highest probability of current word existing
-                        highest = 0
-                        if bigram_back is not None and bigram_forward is not None:
-                            highest = max(bigram_back, bigram_forward)
-                        elif bigram_forward is not None:
-                            highest = bigram_forward
-                        elif bigram_back is not None:
-                            highest = bigram_back
-                        #find highest probability of a confused word existing
-                        for conf in confused[word]:
-                            conf_bigram_back = bigram.get((words[ind-1], conf)) if ind > 0 else None
-                            conf_bigram_forward = bigram.get((conf, words[ind+1])) if ind < len(words) - 1 else None
-                            if conf_bigram_back is not None and conf_bigram_forward is not None:
-                                conf_highest = max(conf_bigram_back, conf_bigram_forward)
-                            elif conf_bigram_forward is not None:
-                                conf_highest = conf_bigram_forward
-                            elif conf_bigram_back is not None:
-                                conf_highest = conf_bigram_back
-                            else:
-                                conf_highest = 0
-                            conf_probs.append((conf_highest, conf))
-                        conf_list = sorted(conf_probs, reverse=True)
-                        #if prob is higher for confused word, use it
-                        if len(conf_list) > 0:
-                            output += (conf_list[0][1] + " ") if highest < conf_list[0][0] else (word + " ")
-                        else:
-                            output += word + " "
-                    #check prob of current word/confused in unigrams, use highest probability word
-                    elif unigram.get(word) is not None:
-                        highest = unigram.get(word)
-                        for conf in confused[word]:
-                            if unigram.get(conf) is not None:
-                                conf_probs.append((unigram.get(conf), conf))
-                        conf_list = sorted(conf_probs, reverse=True)
-                        if len(conf_list) > 0:
-                            output += (conf_list[0][1] + " ") if highest < conf_list[0][0] else (word + " ")
-                        else:
-                            output += word + " "
-                    #if current word has no unigram probability, use the highest probability confused word
-                    elif unigram.get(word) is None:
-                        for conf in confused[word]:
-                            if unigram.get(conf) is not None:
-                                conf_probs.append((unigram.get(conf), conf))
-                        conf_list = sorted(conf_probs, reverse=True)
-                        if len(conf_list) > 0:
-                            output += conf_list[0][1] + " "
-                        else:
-                            output += word + " "
-                    #if now words were in training set, assume the word is right and just use current word
+                    #find the highest probability of current word existing
+                    highest = 0
+                    if bigram_back is not None and bigram_forward is not None:
+                        highest = max(bigram_back, bigram_forward)
+                    elif bigram_forward is not None:
+                        highest = bigram_forward
+                    elif bigram_back is not None:
+                        highest = bigram_back
+                    #find highest probability of a confused word existing
+                    for conf in confused[word]:
+                         conf_bigram_back = bigram.get((words[ind-1], conf)) if ind > 0 else None
+                         conf_bigram_forward = bigram.get((conf, words[ind+1])) if ind < len(words) - 1 else None
+                         if conf_bigram_back is not None and conf_bigram_forward is not None:
+                            conf_highest = max(conf_bigram_back, conf_bigram_forward)
+                         elif conf_bigram_forward is not None:
+                            conf_highest = conf_bigram_forward
+                         elif conf_bigram_back is not None:
+                            conf_highest = conf_bigram_back
+                         else:
+                            conf_highest = 0
+                         conf_probs.append((conf_highest, conf))
+                    conf_list = sorted(conf_probs, reverse=True)
+                    #if prob is higher for confused word, use it
+                    if len(conf_list) > 0:
+                        output += (conf_list[0][1] + " ") if highest < conf_list[0][0] else (word + " ")
+                        highest = 1
                     else:
+                        output += word + " "
+                        highest = 1
+                    #check prob of current word/confused in unigrams, use highest probability word
+                    if highest == 0:
+                        if unigram.get(word) is not None:
+                            highest = unigram.get(word)
+                        for conf in confused[word]:
+                            if unigram.get(conf) is not None:
+                                conf_probs.append((unigram.get(conf), conf))
+                        conf_list = sorted(conf_probs, reverse=True)
+                        if len(conf_list) > 0:
+                            output += (conf_list[0][1] + " ") if highest < conf_list[0][0] else (word + " ")
+                            highest = 1
+                        else:
+                            output += word + " "
+                            highest = 1
+                    #if now words were in training set, assume the word is right and just use current word
+                    if highest == 0:
                         output += word + " "
                 else:
                     output += word + ' '
@@ -87,7 +81,7 @@ def main():
     direc = input("Enter directory name of corpus: \n")
 
     # data_corrected\spell_checking_task\atheism
-    uni, bi = code.find_ngram_prob(direc + r"\train_docs")
+    uni, bi, _, _, _ = code.find_ngram_prob(direc + r"\train_docs")
     spell_checker(direc, uni, bi)
 
 
