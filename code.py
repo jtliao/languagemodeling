@@ -12,6 +12,7 @@ def find_ngram_counts(dirname):
     
     unigram_counts = {}
     bigram_counts = {}
+    trigram_counts = {}
     
     unk_words = set()
     all_tokens = []
@@ -57,8 +58,7 @@ def find_ngram_counts(dirname):
                     unigram_counts[word] = 1
                 else:
                     unigram_counts[word] += 1
-                    
-        
+
     for unigram, count in unigram_counts.items():
         if count == 1:
             word = unigram
@@ -83,6 +83,7 @@ def find_ngram_counts(dirname):
 #             tokens = nltk.word_tokenize(" ".join(added_sentence_tags_list))
 
     prev_word = None
+    prev2_word = None
     for word in all_tokens:
         if word in unk_words:
             word = "unk"
@@ -93,7 +94,13 @@ def find_ngram_counts(dirname):
                 bigram_counts[pair] = 1
             else:
                 bigram_counts[pair] += 1
-                    
+            if prev2_word is not None:
+                tup = (prev2_word, prev_word, word)
+                if tup not in trigram_counts:
+                    trigram_counts[tup] = 1
+                else:
+                    trigram_counts[tup] += 1
+        prev2_word = prev_word
         prev_word = word
                 
     
@@ -111,26 +118,27 @@ def find_ngram_counts(dirname):
 #         else:
 #             a[token_list] = (1./ln)
 
-    return unigram_counts, bigram_counts
+    return unigram_counts, bigram_counts, trigram_counts
 
 
 def find_ngram_prob(dirname, smoothing_param=3):
-    unigram_counts, bigram_counts = find_ngram_counts(dirname)
+    unigram_counts, bigram_counts, trigram_counts = find_ngram_counts(dirname)
     num_word_types = len(unigram_counts)
     unigram_counts = smooth(unigram_counts, 1, num_word_types, smoothing_param)
-#     print(bigram_counts)
     bigram_counts, count_zero = smooth(bigram_counts, 2, num_word_types, smoothing_param)
+    trigram_counts, count_zero_tri = smooth(trigram_counts, 3, num_word_types, smoothing_param)
     
     unigram_probs = {k: v/sum(unigram_counts.values()) for k, v in unigram_counts.items()}
     
     # Bigram probabilities = count(w(n-1) w(n)) / count(w(n-1))
     # The keys in this dict (W1, W2) represent P(W2 | W1)
     bigram_probs = {k: v/unigram_counts[k[0]] for k, v in bigram_counts.items()}
+
+    trigram_probs = {k: v/(unigram_counts[k[0]]*unigram_counts[k[1]]) for k, v in trigram_counts.items()}
     
-    return unigram_probs, bigram_probs, count_zero
+    return unigram_probs, bigram_probs, trigram_probs, count_zero, count_zero_tri
 
 
-#remove used words? how to deal with multiple punctuation in a row?
 def rand_sentence(prob_table, n, start_of_sentence='-s-'):
     tokens = nltk.word_tokenize(start_of_sentence)
     
@@ -154,14 +162,16 @@ def rand_sentence(prob_table, n, start_of_sentence='-s-'):
             while (match == '-s-') or (is_punct & ((match == '.') or
                   (match == ',') or (match == '!') or (match == '?'))):
                 match = np.random.choice(ngram, 1, p=prob)[0]
-        if n == 2:
+        else:
             for k in prob_table.keys():
                 if k[0] == match:
                     ngram.append(k)
                     prob.append(prob_table.get(k))
-            prob = np.array(prob) / np.sum(prob) 
-#             print(prob)
-            match = ngram[np.random.choice(len(ngram), 1, p=prob)[0]][1]
+            prob = np.array(prob) / np.sum(prob)
+            if n == 2:
+                match = ngram[np.random.choice(len(ngram), 1, p=prob)[0]][1]
+            if n == 3:
+                match = ngram[np.random.choice(len(ngram), 1, p=prob)[0]][2]
         if (match == '.') or (match == ',') or (match == '!') or (match == '?'):
             is_punct = True
             sentence += match
@@ -201,6 +211,12 @@ def smooth(counts, n, num_word_types, t):
 #         print(len(counts)**2 - total_count)
         for c in range(0, t):
             new_count[c] = (c+1)*N[c+1]/N[c]
+    if n == 3:
+        V = num_word_types
+        num_trigram_types_seen = len(counts)
+        N[0] = (V**3) - num_trigram_types_seen
+        for c in range(0, t):
+            new_count[c] = (c+1)*N[c+1]/N[c]
     #traverse through counts, if count has been smoothed, then change the value in counts
     for key, value in counts.items():
         if value in new_count:
@@ -220,18 +236,20 @@ def main():
     n=2
     data = r"data_corrected\classification task\atheism\train_docs"
      
-    unigram_prob, bigram_prob,_ = find_ngram_prob(data)
+    unigram_prob, bigram_prob, trigram_prob, _, _ = find_ngram_prob(data)
 
-    #print(unigram_prob["-/s-"])
+    print(trigram_prob)
  
     if n == 1:
         prob_table = unigram_prob
     elif n == 2:
         prob_table = bigram_prob
+    elif n == 3:
+        prob_table = trigram_prob
     else:
         print("Can only do unigram and bigram\n")
         
-    unigram_counts, bigram_counts = find_ngram_counts(data)
+    unigram_counts, bigram_counts, trigram_counts = find_ngram_counts(data)
 #     print(len(bigram_counts.keys()))
 #     print(bigram_prob[("unk","unk")])
 #     print(unigram_prob)
