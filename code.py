@@ -4,9 +4,6 @@ import numpy as np
 import os
 
 
-# data_corrected\classification task\atheism\train_docs
-
-
 def find_ngram_counts(dirname):
     sentence_detector = nltk.data.load("tokenizers/punkt/english.pickle")
     
@@ -102,21 +99,6 @@ def find_ngram_counts(dirname):
                     trigram_counts[tup] += 1
         prev2_word = prev_word
         prev_word = word
-                
-    
-#     ln = len(tokens)
-#     a = {}
-#     for i in range(0, ln - n + 1):
-#         if n == 1:
-#             token_list = tokens[i].lower()
-#         else:
-#             token_list = ()
-#             for j in range(i, i+n):
-#                 token_list = token_list + (tokens[j].lower(),)
-#         if token_list in a:
-#             a[token_list] += (1./ln)
-#         else:
-#             a[token_list] = (1./ln)
 
     return unigram_counts, bigram_counts, trigram_counts
 

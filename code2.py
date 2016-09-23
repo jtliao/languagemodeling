@@ -10,53 +10,6 @@ import code
 sentence_detector = nltk.data.load("tokenizers/punkt/english.pickle")
 
 
-def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
-    token_length = 0
-    
-    # Use bigram probabilities to calculate perplexity
-    prev_word = None
-    summation = 0
-    
-    unknown_count = 0
-    known_count = 0
-    
-    for token in tokens:
-        word = token.lower()
-        
-        if (word == "<" or word == ">" or word == "|" or word == "#" or
-            word == "'" or word == '"' or word == '`' or word == '``' or 
-            word == "@" or "." in word or word == "(" or word == ")"):
-                continue
-            
-        token_length += 1
-        
-        # Don't do any calc for first -s- (no previous word)
-        if prev_word is not None:
-            pair = (prev_word, word)
-            # Fix when we get smoothing to work
-            if pair in bigram_probs:
-                prob_of_pair = bigram_probs[pair]
-    #             print("seen " + str(prob_of_pair))
-                unknown_count += 1
-            else:
-#                 prob_of_pair = .1
-                prob_of_pair = unknown_bigram_prob
-    #             print("unseen " + str(unknown_bigram_prob))
-                known_count += 1
-#             print(prob_of_pair)
-    #         print("Bigram " + str(prob_of_pair))
-            summation += (-math.log(prob_of_pair))
-#             print(summation / token_length)
-                
-        prev_word = word
-#     print(unknown_bigram_prob)
-#     print("unknown " + str(unknown_count))
-#     print("known " + str(known_count))
-    pp = math.exp(1/token_length * summation)
-#     print(pp)
-    return pp
-
-
 def calc_unigram_perplexity(unigram_probs, tokens):
     token_length = 0
     
@@ -87,6 +40,89 @@ def calc_unigram_perplexity(unigram_probs, tokens):
 #     print(pp)
     return pp
 
+
+def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
+    token_length = 0
+    
+    # Use bigram probabilities to calculate perplexity
+    prev_word = None
+    summation = 0
+    
+    for token in tokens:
+        word = token.lower()
+        
+        if (word == "<" or word == ">" or word == "|" or word == "#" or
+            word == "'" or word == '"' or word == '`' or word == '``' or 
+            word == "@" or "." in word or word == "(" or word == ")"):
+                continue
+            
+        token_length += 1
+        
+        # Don't do any calc for first -s- (no previous word)
+        if prev_word is not None:
+            pair = (prev_word, word)
+            # Fix when we get smoothing to work
+            if pair in bigram_probs:
+                prob_of_pair = bigram_probs[pair]
+                print("bigram " + str(prob_of_pair))
+            else:
+#                 prob_of_pair = .1
+                prob_of_pair = unknown_bigram_prob
+                print("unk bigram " + str(prob_of_pair))
+#             print(prob_of_pair)
+    #         print("Bigram " + str(prob_of_pair))
+            summation += (-math.log(prob_of_pair))
+#             print(summation / token_length)
+                
+        prev_word = word
+    pp = math.exp(1/token_length * summation)
+#     print(pp)
+    return pp
+
+
+def calc_trigram_perplexity(trigram_probs, unknown_trigram_prob, tokens):
+    token_length = 0
+    
+    # Use trigram probabilities to calculate perplexity
+    two_prev_word = None
+    prev_word = None
+    summation = 0
+    
+    for token in tokens:
+        word = token.lower()
+        
+        if (word == "<" or word == ">" or word == "|" or word == "#" or
+            word == "'" or word == '"' or word == '`' or word == '``' or 
+            word == "@" or "." in word or word == "(" or word == ")"):
+                continue
+            
+        token_length += 1
+        
+        # Don't do any calc for first -s- (no previous word)
+        if two_prev_word is not None and prev_word is not None:
+            triple = (two_prev_word, prev_word, word)
+            # Fix when we get smoothing to work
+            if triple in trigram_probs:
+                prob_of_triple = trigram_probs[triple]
+                print("triple " + str(prob_of_triple))
+            else:
+#                 prob_of_pair = .1
+                prob_of_triple = unknown_trigram_prob
+                print("unk triple " + str(prob_of_triple))
+                
+            summation += (-math.log(prob_of_triple))
+#             print(summation / token_length)
+        
+        two_prev_word = prev_word        
+        prev_word = word
+        
+#     print(unknown_bigram_prob)
+#     print("unknown " + str(unknown_count))
+#     print("known " + str(known_count))
+    pp = math.exp(1/token_length * summation)
+#     print(pp)
+    return pp
+
 # topics_dir in our case is "data_corrected/classification task"
 def calc_all_perplexities(topics_dir):
     perplexity_table = {}
@@ -107,23 +143,27 @@ def calc_all_perplexities(topics_dir):
             # Tokenize the sentences by words
             tokens = nltk.word_tokenize(" ".join(added_sentence_tags_list))
                         
-            for topic, (unigram_probs, bigram_probs, unknown_bigram_prob) in topic_to_ngram_dict.items():
+            for topic, (unigram_probs, bigram_probs, trigram_probs, zero_prob_bigram, zero_prob_trigram) in topic_to_ngram_dict.items():
                 unigram_pp = calc_unigram_perplexity(unigram_probs, tokens)
-                bigram_pp = calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens)
+                bigram_pp = calc_bigram_perplexity(bigram_probs, zero_prob_bigram, tokens)
+                trigram_pp = calc_trigram_perplexity(trigram_probs, zero_prob_trigram, tokens)
                 if filename not in perplexity_table:
                     perplexity_table[filename] = {}
-                perplexity_table[filename][topic] = (unigram_pp, bigram_pp)
+                perplexity_table[filename][topic] = (unigram_pp, bigram_pp, trigram_pp)
     return perplexity_table
                 
 # Simple classification is just computing perplexity for topic
 # and seeing which topic gives the lowest perplexity                
 def predict_topic(topics_dir, pred_filename, topic_to_ngram_dict, smoothing_param=3):
-    #set to max int value
+    #set to max int value   
+    min_unigram_perplexity = 1000000000
+    best_unigram_topic_guess = ""
+    
     min_bigram_perplexity = 1000000000
     best_bigram_topic_guess = ""
     
-    min_unigram_perplexity = 1000000000
-    best_unigram_topic_guess = ""
+    min_trigram_perplexity = 1000000000
+    best_trigram_topic_guess = ""
     
     with open(pred_filename, "r") as f:
         text = f.readline()
@@ -137,18 +177,25 @@ def predict_topic(topics_dir, pred_filename, topic_to_ngram_dict, smoothing_para
         # Tokenize the sentences by words
         tokens = nltk.word_tokenize(" ".join(added_sentence_tags_list))
         
-        for topic, (unigram_probs, bigram_probs, unknown_bigram_prob) in topic_to_ngram_dict.items():
-            pp_unigram = calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens)
-            if pp_unigram < min_bigram_perplexity:
-                min_bigram_perplexity = pp_unigram
+        for topic, (unigram_probs, bigram_probs, trigram_probs, zero_prob_bigram, zero_prob_trigram) in topic_to_ngram_dict.items():
+                
+            pp_unigram = calc_unigram_perplexity(unigram_probs, tokens)
+            if pp_unigram < min_unigram_perplexity:
+                min_unigram_perplexity = pp_unigram
+                best_unigram_topic_guess = topic
+                
+            pp_bigram = calc_bigram_perplexity(bigram_probs, zero_prob_bigram, tokens)
+            if pp_bigram < min_bigram_perplexity:
+                min_bigram_perplexity = pp_bigram
                 best_bigram_topic_guess = topic
+             
                 
-            pp_bigram = calc_unigram_perplexity(unigram_probs, tokens)
-            if pp_bigram < min_unigram_perplexity:
-                min_unigram_perplexity = pp_bigram
-                best_unigram_topic_guess = topic 
+            pp_trigram = calc_trigram_perplexity(trigram_probs, zero_prob_trigram, tokens)
+            if pp_trigram < min_trigram_perplexity:
+                min_trigram_perplexity = pp_trigram
+                best_trigram_topic_guess = topic
                 
-    return (best_unigram_topic_guess, best_bigram_topic_guess)
+    return (best_unigram_topic_guess, best_bigram_topic_guess, best_trigram_topic_guess)
 
     
 def get_topic_to_ngram_dict(topics_dir, smoothing_param=3):
@@ -157,9 +204,9 @@ def get_topic_to_ngram_dict(topics_dir, smoothing_param=3):
         # Get all topic directories besides test dir
         if topic == "test_for_classification":
             continue
-        [unigram_probs, bigram_probs, zero_prob_bigram] = code.find_ngram_prob(
+        [unigram_probs, bigram_probs, trigram_probs, zero_prob_bigram, zero_prob_trigram] = code.find_ngram_prob(
             os.path.join(topics_dir, topic, "train_docs"), smoothing_param)     
-        topic_to_ngram_dict[topic] = (unigram_probs, bigram_probs, zero_prob_bigram)
+        topic_to_ngram_dict[topic] = (unigram_probs, bigram_probs, trigram_probs, zero_prob_bigram, zero_prob_trigram)
     return topic_to_ngram_dict    
          
 
@@ -266,13 +313,13 @@ def classify_topics_test(topics_dir, smoothing_param):
                 
 def main():
 #     calc_all_perplexities("data_corrected/classification task")
-#     print(calc_all_perplexities("data_corrected/classification task"))
+    print(calc_all_perplexities("data_corrected/classification task"))
 
 #     print(predict_topic("data_corrected/classification task", "data_corrected/classification task/test_for_classification/file_186.txt"))
 
 #     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)    
 #     print(classify_topics_validation("data_corrected/classification task"))
-    classify_topics_test("data_corrected/classification task", 3)
+#     classify_topics_test("data_corrected/classification task", 3)
 
 if __name__ == '__main__':
     main()
