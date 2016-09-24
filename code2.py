@@ -28,16 +28,9 @@ def calc_unigram_perplexity(unigram_probs, tokens):
         else:
             prob_of_token = unigram_probs["unk"]
                     
-#         print("unigram " + str(prob_of_token))
-#         print(word + " " + str(prob_of_token))
-#         print(-math.log(prob_of_token))
-
         summation += (-math.log(prob_of_token))
-#         print(summation / token_length)
-                
-#     print(1/token_length * summation) 
+        
     pp = math.exp(1/token_length * summation)
-#     print(pp)
     return pp
 
 
@@ -64,26 +57,17 @@ def calc_bigram_perplexity(bigram_probs, unknown_bigram_prob, tokens):
             # Fix when we get smoothing to work
             if pair in bigram_probs:
                 prob_of_pair = bigram_probs[pair]
-#                 print("bigram " + str(prob_of_pair))
             else:
-#                 prob_of_pair = .1
-#                 prob_of_pair = unknown_bigram_prob
 
                 if prev_word in bigram_probs:
                     prob_of_pair = bigram_probs[prev_word]
-#                     print("unk bigram " + str(prob_of_pair))
                 else:
                     prob_of_pair = bigram_probs["unk"]
-#                     print("unk bigram unigram " + str(prob_of_pair))
 
-#             print(prob_of_pair)
-#             print("Bigram " + str(prob_of_pair))
             summation += (-math.log(prob_of_pair))
-#             print(summation / token_length)
-                
+            
         prev_word = word
     pp = math.exp(1/token_length * summation)
-#     print(pp)
     return pp
 
 
@@ -108,29 +92,20 @@ def calc_trigram_perplexity(trigram_probs, unknown_trigram_prob, tokens):
         # Don't do any calc for first -s- (no previous word)
         if two_prev_word is not None and prev_word is not None:
             triple = (two_prev_word, prev_word, word)
-            # Fix when we get smoothing to work
             if triple in trigram_probs:
                 prob_of_triple = trigram_probs[triple]
-#                 print("triple " + str(prob_of_triple))
             else:
-#                 prob_of_triple = unknown_trigram_prob
                 prev_bigram = (two_prev_word, prev_word)
                 if prev_bigram in trigram_probs:
                     prob_of_triple = trigram_probs[prev_bigram]
-#                     print("unk triple " + str(prob_of_triple))
                 else:
                     prob_of_triple = trigram_probs["unk"]
-#                     print("unk triple bigram " + str(prob_of_triple))
                 
             summation += (-math.log(prob_of_triple))
-#             print(summation / token_length)
         
         two_prev_word = prev_word        
         prev_word = word
         
-#     print(unknown_bigram_prob)
-#     print("unknown " + str(unknown_count))
-#     print("known " + str(known_count))
     pp = math.exp(1/token_length * summation)
 #     print(pp)
     return pp
@@ -184,7 +159,6 @@ def predict_topic(topics_dir, pred_filename, topic_to_ngram_dict, smoothing_para
 
         # Add sentence boundary tags to each sentence
         added_sentence_tags_list = ["-s- " + sentence + " -/s-" for sentence in sentence_list]
-#             print(added_sentence_tags_list)
             
         # Tokenize the sentences by words
         tokens = nltk.word_tokenize(" ".join(added_sentence_tags_list))
@@ -222,26 +196,6 @@ def get_topic_to_ngram_dict(topics_dir, smoothing_param=3):
     return topic_to_ngram_dict    
          
 
-# I split them manually instead (first 61 in validation, rest in training)
-# def split_training_and_validation(topics_dir):
-#     training_file_to_topic_dict = {}
-#     validation_file_to_topic_dict = {}
-#     
-#     for topic in os.listdir(topics_dir):
-#         training_files = os.path.join(topics_dir, topic, "train_docs")
-#         num_files = len(training_files)
-#         
-#         # Design decision to do a 80-20 split
-#         for i in range(0, num_files * 0.8):
-#             filename = training_files[i]
-#             training_file_to_topic_dict[filename] = topic 
-#         
-#         for i in range(num_files * 0.8, num_files):
-#             filename = training_files[i]
-#             validation_file_to_topic_dict[filename] = topic
-#         
-#     return training_file_to_topic_dict, validation_file_to_topic_dict
-
 def classify_topics_validation(topics_dir):
     best_accuracy_unigram = 0
     best_accuracy_bigram = 0
@@ -274,8 +228,7 @@ def classify_topics_validation(topics_dir):
                 validation_file = os.path.join(topics_dir, topic, "validation_docs", validation_file)
                 
                 (best_unigram_topic_guess, best_bigram_topic_guess, best_trigram_topic_guess) = predict_topic(topics_dir, validation_file, topic_to_ngram_dict, smoothing_param)
-#                 print((best_unigram_topic_guess, best_bigram_topic_guess))
-                
+
                 if topic == best_unigram_topic_guess:
                     num_correct_unigram += 1
                     
@@ -330,22 +283,59 @@ def classify_topics_test(topics_dir, smoothing_param):
         for file in os.listdir(test_dir):
             test_file = os.path.join(test_dir, file)
             
-#             (_, _, best_trigram_topic_guess) = predict_topic(topics_dir, test_file, topic_to_ngram_dict, smoothing_param)
-#             csv_writer.writerow([file, topic_to_num[best_trigram_topic_guess]])
             (_, best_bigram_topic_guess, _) = predict_topic(topics_dir, test_file, topic_to_ngram_dict, smoothing_param)
             csv_writer.writerow([file, topic_to_num[best_bigram_topic_guess]])
 
 
                 
 def main():
-#     calc_all_perplexities("data_corrected/classification task")
+
+
+    # Uncomment this to calculate the perplexity for each corpus for each test file
+    # This will print out a Python Dict with each file name and corpus mapping to a perplexity number
 #     print(calc_all_perplexities("data_corrected/classification task"))
 
-#     print(predict_topic("data_corrected/classification task", "data_corrected/classification task/test_for_classification/file_186.txt"))
+    count=0
+    avg_dict = {}
+    pp_dict = calc_all_perplexities("data_corrected/classification task")
+    for _, topic_to_pp_dict in pp_dict.items():
+        for topic, (unigram, bigram, trigram) in topic_to_pp_dict.items():
+            
+            if topic not in avg_dict:
+                avg_dict[topic] = (0,0,0)
 
-#     topic_to_ngram_dict = get_topic_to_ngram_dict("data_corrected/classification task", 3)    
+            curr_unigram = avg_dict[topic][0]
+#             print("u " + str(unigram))
+#             print("c " + str(curr_unigram))
+#             print("sum " + str(curr_unigram + unigram))
+#             
+            
+            curr_bigram = avg_dict[topic][1]
+            curr_trigram = avg_dict[topic][2]
+            
+            avg_dict[topic] = (curr_unigram + unigram, curr_bigram + bigram, curr_trigram + trigram)
+#             print(avg_dict[topic])
+#             
+#             if count == 50:
+#                 return
+             
+        count += 1
+            # Could add trigram too if we want
+            
+    for topic, (unigram, bigram, trigram) in avg_dict.items():
+        avg_dict[topic] = (unigram / count, bigram / count, trigram / count)
+    print(avg_dict)    
+
+    # Uncomment and change filename to predict the topic of a certain file in the test_for_classification directory
+#     filename = "file_186.txt"
+#     print(predict_topic("data_corrected/classification task", 
+#                         os.path.join("data_corrected/classification task/test_for_classification", filename)))
+
+    # Uncomment to print out the accuracy and best smoothing parameters when classifying the validation set
 #     print(classify_topics_validation("data_corrected/classification task"))
-    classify_topics_test("data_corrected/classification task", 10)
+
+    # Uncomment to classify the test documents and this creates the CSV that is submitted to Kaggle
+#     classify_topics_test("data_corrected/classification task", 10)
 
 if __name__ == '__main__':
     main()
