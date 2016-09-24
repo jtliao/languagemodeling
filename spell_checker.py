@@ -35,17 +35,17 @@ def spell_checker(dirname, unigram, bigram):
                         highest = bigram_back
                     #find highest probability of a confused word existing
                     for conf in confused[word]:
-                         conf_bigram_back = bigram.get((words[ind-1], conf)) if ind > 0 else None
-                         conf_bigram_forward = bigram.get((conf, words[ind+1])) if ind < len(words) - 1 else None
-                         if conf_bigram_back is not None and conf_bigram_forward is not None:
+                        conf_bigram_back = bigram.get((words[ind-1], conf)) if ind > 0 else None
+                        conf_bigram_forward = bigram.get((conf, words[ind+1])) if ind < len(words) - 1 else None
+                        if conf_bigram_back is not None and conf_bigram_forward is not None:
                             conf_highest = max(conf_bigram_back, conf_bigram_forward)
-                         elif conf_bigram_forward is not None:
+                        elif conf_bigram_forward is not None:
                             conf_highest = conf_bigram_forward
-                         elif conf_bigram_back is not None:
+                        elif conf_bigram_back is not None:
                             conf_highest = conf_bigram_back
-                         else:
+                        else:
                             conf_highest = 0
-                         conf_probs.append((conf_highest, conf))
+                        conf_probs.append((conf_highest, conf))
                     conf_list = sorted(conf_probs, reverse=True)
                     #if prob is higher for confused word, use it
                     if len(conf_list) > 0:
@@ -72,15 +72,14 @@ def spell_checker(dirname, unigram, bigram):
                     if highest == 0:
                         output += word + " "
                 else:
-                    output += word + ' '
-        with open(os.path.join(dirname+r'\test_docs', filename.replace('_modified', '')), 'w') as file:
+                    output += word + " "
+        with open(os.path.join(dirname+r'\test_docs', filename), 'w') as file:
             file.write(output)
 
 
 def main():
     direc = input("Enter directory name of corpus: \n")
-
-    # data_corrected\spell_checking_task\atheism
+    #data_corrected\spell_checking_task\atheism
     uni, bi, _, _, _ = code.find_ngram_prob(direc + r"\train_docs")
     spell_checker(direc, uni, bi)
 
